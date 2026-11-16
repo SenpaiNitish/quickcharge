@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuickCharge Station</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titan+One&family=Nunito:wght@400;700;800&display=swap">
+<style>
+  :root {
+    --bg: #cbbcff;         /* lilac */
+    --ink: #1b1035;
+    --lime: #b8ff3d;
+    --coral: #ff5d73;
+    --white: #ffffff;
+    --pop: "Titan One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+    --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.08rem;
+    line-height: 1.5;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .logo { font-family: var(--pop); font-size: 1.5rem; }
+
+  /* battery that fills when you press the button */
+  .meter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--pop);
+  }
+  .battery {
+    width: 150px; height: 46px;
+    border: 4px solid var(--ink);
+    border-radius: 12px;
+    background: var(--white);
+    padding: 3px;
+    position: relative;
+  }
+  .battery::after {
+    content: "";
+    position: absolute;
+    right: -12px; top: 11px;
+    width: 8px; height: 16px;
+    background: var(--ink);
+    border-radius: 0 4px 4px 0;
+  }
+  .fill {
+    height: 100%;
+    width: 1%;
+    border-radius: 6px;
+    background: hsl(0 90% 62%);
+    transition: width 2.4s cubic-bezier(.3, .7, .3, 1);
+  }
+  .pct { min-width: 4ch; font-size: 1.3rem; }
+
+  h1 {
+    font-family: var(--pop);
+    font-weight: 400;
+    font-size: clamp(2.3rem, 8vw, 4.2rem);
+    line-height: 1.02;
+    margin: 36px 0 12px;
+  }
+  .lede { max-width: 52ch; margin: 0 0 22px; font-weight: 700; }
+
+  .plug {
+    font-family: var(--pop);
+    font-size: 1.25rem;
+    color: var(--ink);
+    background: var(--lime);
+    border: 4px solid var(--ink);
+    border-radius: 16px;
+    padding: 12px 26px;
+    cursor: pointer;
+    box-shadow: 5px 5px 0 var(--ink);
+    transition: transform .1s ease, box-shadow .1s ease;
+  }
+  .plug:hover { transform: translate(-1px, -2px) rotate(-1deg); box-shadow: 7px 8px 0 var(--ink); }
+  .plug:active { transform: translate(4px, 4px); box-shadow: 1px 1px 0 var(--ink); }
+  .plug:focus-visible, .ask:focus-visible { outline: 4px solid var(--white); outline-offset: 3px; }
+
+  /* video as a tilted sticker */
+  .sticker {
+    margin: 44px 0 0;
+    background: var(--white);
+    border: 5px solid var(--ink);
+    border-radius: 24px;
+    box-shadow: 10px 10px 0 var(--ink);
+    transform: rotate(-1.2deg);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    position: relative;
+  }
+  video { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .video-error {
+    position: absolute; inset: 0;
+    display: none;
+    place-items: center;
+    text-align: center;
+    padding: 24px;
+    font-weight: 800;
+  }
+  .sticker.failed .video-error { display: grid; }
+  .sticker.failed video { display: none; }
+
+  .sound {
+    position: absolute;
+    right: 14px; bottom: 14px;
+    font-family: var(--pop);
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--lime);
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .sound:focus-visible { outline: 4px solid var(--coral); outline-offset: 3px; }
+  .sound:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+
+  .asks { display: flex; flex-wrap: wrap; gap: 16px; margin: 56px 0 26px; }
+  .ask {
+    font-family: var(--pop);
+    font-size: 1.15rem;
+    color: var(--ink);
+    background: var(--white);
+    border: 4px solid var(--ink);
+    border-radius: 999px;
+    padding: 10px 24px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 var(--ink);
+    transition: transform .12s ease;
+  }
+  .ask:nth-child(1):hover { transform: rotate(-3deg) scale(1.04); }
+  .ask:nth-child(2):hover { transform: rotate(3deg) scale(1.04); }
+  .ask[aria-selected="true"] { background: var(--coral); color: var(--white); }
+
+  /* answers appear in a speech bubble */
+  .panel {
+    position: relative;
+    background: var(--white);
+    border: 4px solid var(--ink);
+    border-radius: 22px;
+    padding: 20px 26px;
+    max-width: 64ch;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .panel::before {
+    content: "";
+    position: absolute;
+    top: -16px; left: 40px;
+    width: 26px; height: 26px;
+    background: var(--white);
+    border-left: 4px solid var(--ink);
+    border-top: 4px solid var(--ink);
+    transform: rotate(45deg);
+  }
+  .panel[hidden] { display: none; }
+  .panel h2 { font-family: var(--pop); font-weight: 400; font-size: 1.6rem; margin: 0 0 8px; }
+  .panel ul { margin: 0; padding-left: 1.1em; }
+  .panel li { margin-bottom: 8px; font-weight: 700; }
+
+  footer { margin-top: 52px; font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fill, .plug, .ask { transition: none; }
+    .plug:hover, .ask:hover { transform: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="logo">⚡ QuickCharge</div>
+    <div class="meter" aria-live="polite">
+      <div class="battery"><div class="fill" id="fill"></div></div>
+      <span class="pct" id="pct">1%</span>
+    </div>
+  </div>
+
+  <h1>Ugh, 1% battery.</h1>
+  <p class="lede">Scan the QR, pay with any UPI app, and your phone starts charging. Try it on this one first.</p>
+  <button class="plug" id="plug">Plug me in</button>
+
+  <div class="sticker" id="frame">
+    <video id="demo" autoplay muted loop playsinline preload="auto"></video>
+    <button class="sound" id="sound" type="button" aria-pressed="false">🔇 Tap for sound</button>
+    <div class="video-error">The demo video couldn’t be loaded. Check the file name set in VIDEO_PATH at the bottom of this page.</div>
+  </div>
+
+  <div class="asks" role="tablist" aria-label="About QuickCharge Station">
+    <button class="ask" role="tab" id="tab-what" aria-controls="panel-what" aria-selected="true">What is this?</button>
+    <button class="ask" role="tab" id="tab-why" aria-controls="panel-why" aria-selected="false">Why do I need it?</button>
+  </div>
+
+  <section class="panel" id="panel-what" role="tabpanel" aria-labelledby="tab-what">
+    <h2>A charger that runs itself</h2>
+    <ul>
+      <li>A small unit on a shop counter, with a QR code and a screen.</li>
+      <li>Scan, pay with any UPI app, and power switches on by itself.</li>
+      <li>The screen counts down your time, then power switches off.</li>
+    </ul>
+  </section>
+
+  <section class="panel" id="panel-why" role="tabpanel" aria-labelledby="tab-why" hidden>
+    <h2>Because phones die at the worst time</h2>
+    <ul>
+      <li>Out and about with no charger? There’s one on the counter, and you pay only for your session.</li>
+      <li>Shops offer charging without lending cables, handling cash, or babysitting the outlet.</li>
+      <li>Payment comes first, so the shop earns from every charge.</li>
+    </ul>
+  </section>
+
+  <footer>© 2026 QuickCharge Station</footer>
+</main>
+
+<script>
+  // Set your video file here. Keep the video in the same folder as this page,
+  // or use a full URL (https://...) if it is hosted somewhere.
+  const VIDEO_PATH = "video.mp4";
+
+  const video = document.getElementById("demo");
+  const frame = document.getElementById("frame");
+  video.src = VIDEO_PATH;
+  video.addEventListener("error", () => frame.classList.add("failed"));
+  video.play().catch(() => {});
+
+  // One sound button: browsers only allow sound after a click, so the video
+  // starts muted and this button switches the sound on and off.
+  const sound = document.getElementById("sound");
+  sound.addEventListener("click", () => {
+    video.muted = !video.muted;
+    sound.textContent = video.muted ? "🔇 Tap for sound" : "🔊 Sound on";
+    sound.setAttribute("aria-pressed", String(!video.muted));
+    video.play().catch(() => {});
+  });
+
+  // Tabs: show one answer at a time
+  const tabs = document.querySelectorAll(".ask");
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      tabs.forEach(t => {
+        const on = t === tab;
+        t.setAttribute("aria-selected", on);
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      });
+    });
+  });
+
+  // Battery: press the button to charge it from 1% to 100%
+  const fill = document.getElementById("fill");
+  const pct = document.getElementById("pct");
+  const plug = document.getElementById("plug");
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let level = 1, timer = null;
+
+  function paint(n) {
+    level = n;
+    fill.style.width = n + "%";
+    fill.style.background = "hsl(" + Math.round(n * 1.05) + " 85% 55%)"; // red to green
+    pct.textContent = Math.round(n) + "%";
+  }
+
+  plug.addEventListener("click", () => {
+    if (level >= 100) {
+      clearInterval(timer);
+      paint(1);
+      plug.textContent = "Plug me in";
+      return;
+    }
+    plug.textContent = "Charging…";
+    plug.disabled = true;
+    if (calm) { paint(100); plug.disabled = false; plug.textContent = "Drain it again"; return; }
+    fill.style.width = "100%";
+    const start = performance.now();
+    timer = setInterval(() => {
+      const t = Math.min((performance.now() - start) / 2400, 1);
+      const eased = 1 - Math.pow(1 - t, 2);
+      const n = 1 + eased * 99;
+      pct.textContent = Math.round(n) + "%";
+      fill.style.background = "hsl(" + Math.round(n * 1.05) + " 85% 55%)";
+      if (t >= 1) {
+        clearInterval(timer);
+        level = 100;
+        plug.disabled = false;
+        plug.textContent = "Drain it again";
+      }
+    }, 40);
+  });
+</script>
+</body>
+</html>
